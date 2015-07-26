@@ -128,6 +128,6 @@ The final part of the Data Analysis is making predictions using the predict func
 ##Levels: A B C D E
 ```
 
-###NOTE: The results that I got using this Machine Learning Algorithm are 19/20.  
-###I have commented the model fitting and prediction part as it takes a large amount of time.  
-###Please see the screenshot of my results (if needed).
+####NOTE: The results that I got using this Machine Learning Algorithm are 19/20.  
+####I have commented the model fitting and prediction part as it takes a large amount of time.  
+####Please see the screenshot of my results (if needed).

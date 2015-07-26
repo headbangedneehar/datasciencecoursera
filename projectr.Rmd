@@ -1,0 +1,134 @@
+---
+output: html_document
+---
+This research is based on Human Activity Recognition which have many potential applications for HAR, like: elderly monitoring, life log systems for monitoring energy expenditure and for supporting weight-loss programs, and digital assistants for weight lifting exercises.  
+This human activity recognition research has traditionally focused on discriminating between different activities, i.e. to predict "which" activity was performed at a specific point in time (like with the Daily Living Activities dataset above). The approach we propose for the Weight Lifting Exercises dataset is to investigate "how (well)" an activity was performed by the wearer. The "how (well)" investigation has only received little attention so far, even though it potentially provides useful information for a large variety of applications,such as sports training.  
+In this work we first define quality of execution and investigate three aspects that pertain to qualitative activity recognition: the problem of specifying correct execution, the automatic and robust detection of execution mistakes, and how to provide feedback on the quality of execution to the user. We tried out an on-body sensing approach (dataset here), but also an "ambient sensing approach" (by using Microsoft Kinect - dataset still unavailable)  
+Six young health participants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions: exactly according to the specification (Class A), throwing the elbows to the front (Class B), lifting the dumbbell only halfway (Class C), lowering the dumbbell only halfway (Class D) and throwing the hips to the front (Class E).
+
+It should be noted that the transformations made on the Training Data Set must be made on the Testing as well.
+In my machine learning model I have used the Random Forests algorithm.
+Packages used:
+-dplyr     : for Data Wrangling
+-caret     : for Model fitting and predictions
+-doParellel: for CPU optimization
+
+```{r,results='hide', message=F, warning=F,echo=FALSE,cache=TRUE}
+library(dplyr)
+library(caret)
+training<-read.csv("pml-training.csv",stringsAsFactors=FALSE)
+testing<-read.csv("pml-testing.csv",stringsAsFactors=FALSE)
+```
+
+##Exploring Data
+
+Used str function to explore the data. 
+```{r,cache=TRUE}
+#Exploring Data
+dim(training)
+dim(testing)
+str(training)
+str(testing)
+```
+
+##Cleaning Dataset
+###We see that first row of the data set are the row indices. Excluding it from data. On exploring the data, it can be seen that there is an unwanted/unclean value "#DIV/0!". Using gsub to replace unclean values with NA values.
+
+```{r,cache=TRUE}
+#removing unwanted variables
+training<-training[,-1]
+testing<-testing[,-1]
+testing<-testing[,-dim(testing)[2]]
+for(i in 1:dim(training)[2])
+{
+  training[,i]<-gsub(pattern = "#DIV/0!",replacement = NA,training[,i])
+}
+
+for(i in 1:dim(testing)[2])
+{
+  testing[,i]<-gsub(pattern = "#DIV/0!",replacement = NA,testing[,i])
+}
+```
+
+After cleaning the data, we see that the use of the gsub function converts all the variables to character type. In my exploratory analysis with the dataset, I analyzed that certain variables must be  made to factor type and the rest of the variables to numeric for best results. The variables converted to factor type are: classe, cvtd_timestamp, new_window, num_window, total_accel_belt and user_name.
+
+```{r ,cache=TRUE}
+#Convert to factor type:
+training<-mutate(training,classe=as.factor(classe))
+training<-mutate(training,cvtd_timestamp=as.factor(cvtd_timestamp))
+testing<-mutate(testing,cvtd_timestamp=as.factor(cvtd_timestamp))
+training<-mutate(training,new_window=as.factor(new_window))
+testing<-mutate(testing,new_window=as.factor(new_window))
+training<-mutate(training,num_window=as.factor(num_window))
+testing<-mutate(testing,num_window=as.factor(num_window))
+training<-mutate(training,total_accel_belt=as.factor(total_accel_belt))
+testing<-mutate(testing,total_accel_belt=as.factor(total_accel_belt))
+training<-mutate(training,user_name=as.factor(user_name))
+testing<-mutate(testing,user_name=as.factor(user_name))
+#convert from character to numeric
+for(i in c(2:3,6:(dim(training)[2]-1)))
+{
+  if(is.character(training[,i]))
+  {
+    class(training[,i])<-"numeric"
+    class(testing[,i])<-"numeric"
+  }
+}
+```
+
+##Selecting Covariates:
+This is an important part in our Machine Learning Model building. I used the nearZeroVar function which calculates the total zero variance and near zero variance of the variables. For my machine learning algorith, I eliminated those variables with near zero values. Also, during the time of data exploration, I analyzed that a almost 50% of the variables were incomplete and would result to problems for making predictions. I excluded those variables from the dataset which have more than have of the fields as NA values.
+```{r, cache=TRUE}
+nearZeroVar(training,saveMetrics = T)->asd
+training<-training[,!asd$nzv]
+testing<-testing[,!asd$nzv[1:length(asd$nzv)-1]]
+#Removing Incomple Variables
+index=NULL
+for(i in 1:dim(training)[2])
+{
+  if((dim(training)[1]/2)<length(training[,i][is.na(training[,i])]))
+  {
+    index<-c(index,i)
+  }
+}
+training<-training[,-index]
+testing<-testing[,-index]
+```
+
+##Building sub-training set. 
+I used a subtraining data set with around six thousand observations as the Random Forests model would have taken very very long for the original number of observations, ie. 19,000.
+```{r,cache=TRUE}
+#Create subtraining data set
+intrain<-createDataPartition(training$classe,p=.3,list=F)
+subtraining<-training[intrain,]
+subtesting<-training[-intrain,]
+dim(subtraining)
+```
+
+##Training the dataset
+I then trained my subtraining dataset using the train function and passing method='rf' as a parameter for using the Random Forests model. 
+```{r,cache=TRUE,}
+#fit<-train(classe~.,subtraining,method="rf",na.action=na.pass)
+```
+
+##Making Predictions using created model
+The final part of the Data Analysis is making predictions using the predict function.
+```{r,cache=TRUE}
+#predict(fit,testing)
+##Loading required package: randomForest
+##randomForest 4.6-10
+##Type rfNews() to see new features/changes/bug fixes.
+
+##Attaching package: 'randomForest'
+
+##The following object is masked from 'package:dplyr':
+
+##    combine
+
+## [1] B A A A A E D B A A B C B A E E A B B B
+##Levels: A B C D E
+```
+
+###NOTE: The results that I got using this Machine Learning Algorithm are 19/20.  
+###I have commented the model fitting and prediction part as it takes a large amount of time.  
+###Please see the screenshot of my results (if needed).
